@@ -6,6 +6,8 @@ pub use signal_declaration_analysis::check_signal_correctness;
 pub use symbol_analysis::check_naming_correctness;
 pub use type_check::type_check;
 pub use unknown_known_analysis::unknown_known_analysis;
+pub use lint::report_lints;
+pub use cfg::*;
 
 pub mod custom_gate_analysis;
 pub mod functions_all_paths_with_return_statement;
@@ -17,3 +19,6 @@ pub mod type_check;
 pub mod type_given_function;
 pub mod type_register;
 pub mod unknown_known_analysis;
+pub mod lint;
+pub mod cfg;
+pub mod termination;

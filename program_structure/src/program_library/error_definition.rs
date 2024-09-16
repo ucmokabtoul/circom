@@ -12,6 +12,7 @@ type ReportNote = String;
 pub enum MessageCategory {
     Error,
     Warning,
+    Note,
 }
 impl MessageCategory {
     fn is_error(&self) -> bool {
@@ -25,6 +26,13 @@ impl MessageCategory {
         use MessageCategory::*;
         match self {
             Warning => true,
+            _ => false,
+        }
+    }
+    fn is_note(&self) -> bool {
+        use MessageCategory::*;
+        match self {
+            Note => true,
             _ => false,
         }
     }
@@ -75,6 +83,19 @@ impl Report {
     pub fn warning(error_message: String, code: ReportCode) -> Report {
         Report::new(MessageCategory::Warning, error_message, code)
     }
+    pub fn warning_with_promary(error_message: String, error_code: ReportCode, primary: Vec<ReportLabel>) -> Report {
+        Report {
+            category: MessageCategory::Warning,
+            error_message,
+            error_code,
+            primary,
+            secondary: Vec::new(),
+            notes: Vec::new(),
+        }
+    }
+    pub fn note(error_message: String, code: ReportCode) -> Report {
+        Report::new(MessageCategory::Note, error_message, code)
+    }
     pub fn add_primary(
         &mut self,
         location: FileLocation,
@@ -108,11 +129,17 @@ impl Report {
         let mut secondary = self.get_secondary().clone();
         labels.append(&mut secondary);
 
-        if self.is_warning() { Diagnostic::warning() } else { Diagnostic::error() }
-            .with_message(self.get_message())
-            .with_code(Report::error_code_to_diagnostic_code(self.get_code()))
-            .with_labels(labels)
-            .with_notes(self.get_notes().clone())
+        if self.is_warning() {
+            Diagnostic::warning()
+        } else if self.is_note() {
+            Diagnostic::help()
+        } else {
+            Diagnostic::error()
+        }
+        .with_message(self.get_message())
+        .with_code(Report::error_code_to_diagnostic_code(self.get_code()))
+        .with_labels(labels)
+        .with_notes(self.get_notes().clone())
     }
 
     pub fn is_error(&self) -> bool {
@@ -120,6 +147,9 @@ impl Report {
     }
     pub fn is_warning(&self) -> bool {
         self.get_category().is_warning()
+    }
+    pub fn is_note(&self) -> bool {
+        self.get_category().is_note()
     }
     pub fn get_category(&self) -> &MessageCategory {
         &self.category

@@ -13,4 +13,5 @@ circom_algebra = { path = "../circom_algebra" }
 program_structure = { path = "../program_structure" }
 constraint_writers = { path = "../constraint_writers" }
 constraint_list = { path = "../constraint_list" }
+type_analysis = { path = "../type_analysis" }
 dag = { path = "../dag" }

@@ -7,7 +7,7 @@ use program_structure::utils::environment::VarEnvironment;
 use program_structure::{function_data::FunctionData, template_data::TemplateData};
 use std::collections::HashSet;
 
-type Constants = VarEnvironment<bool>;
+pub type Constants = VarEnvironment<bool>;
 type ExpressionHolder = VarEnvironment<Expression>;
 
 pub fn handle_function_constants(function: &mut FunctionData) -> ReportCollection {
@@ -21,7 +21,7 @@ pub fn handle_function_constants(function: &mut FunctionData) -> ReportCollectio
     expand_statement(function.get_mut_body(), &mut expression_holder);
     reports
 }
-pub fn _handle_template_constants(template: &mut TemplateData) -> ReportCollection {
+pub fn _handle_template_constants(template: &mut TemplateData) -> (ReportCollection, Constants) {
     let mut environment = Constants::new();
     let mut expression_holder = ExpressionHolder::new();
     for p in template.get_name_of_params() {
@@ -35,7 +35,7 @@ pub fn _handle_template_constants(template: &mut TemplateData) -> ReportCollecti
     statement_constant_inference(template.get_mut_body(), &mut environment);
     let reports = statement_invariant_check(template.get_body(), &mut environment);
     expand_statement(template.get_mut_body(), &mut expression_holder);
-    reports
+    (reports, environment)
 }
 
 // Set of functions used to infer the constant tag in variable declarations
@@ -45,7 +45,10 @@ fn statement_constant_inference(stmt: &mut Statement, environment: &mut Constant
         IfThenElse { if_case, else_case, .. } => {
             if_then_else_constant_inference(if_case, else_case, environment)
         }
-        Substitution { var, .. } => substitution_constant_inference(var, environment),
+        Declaration { name, .. } => declaration_constant_inference(name, false, environment),
+        Substitution { meta, var, rhe, .. } => {
+            substitution_constant_inference(var, meta, rhe, environment)
+        }
         InitializationBlock { initializations, .. } => {
             initialization_block_constant_inference(initializations, environment)
         }
@@ -59,8 +62,14 @@ fn declaration_constant_inference(name: &str, is_constant: bool, environment: &m
     environment.add_variable(name, is_constant);
 }
 
-fn substitution_constant_inference(name: &str, environment: &mut Constants) {
-    *environment.get_mut_variable_or_break(name, file!(), line!()) = false;
+fn substitution_constant_inference(
+    name: &str,
+    _meta: &Meta,
+    rhe: &Expression,
+    environment: &mut Constants,
+) {
+    //*environment.get_mut_variable_or_break(name, file!(), line!()) = false;
+    environment.add_variable(name, has_constant_value(rhe, environment));
 }
 
 fn initialization_block_constant_inference(
@@ -69,13 +78,15 @@ fn initialization_block_constant_inference(
 ) {
     use Statement::{Declaration, Substitution};
     let mut initialized_signals = HashSet::new();
+
     for s in initializations {
-        if let Substitution { var, .. } = s {
-            initialized_signals.insert(var.clone());
-        }
-    }
-    for s in initializations {
-        if let Declaration { name, xtype, dimensions, .. } = s {
+        if let Substitution { var, rhe, .. } = s {
+            if has_constant_value(rhe, environment) {
+                declaration_constant_inference(var, true, environment);
+            } else {
+                initialized_signals.insert(var);
+            }
+        } else if let Declaration { name, xtype, dimensions, .. } = s {
             let constant_tag = dimensions.is_empty()
                 && initialized_signals.contains(name)
                 && (*xtype == VariableType::Var);
@@ -224,7 +235,9 @@ fn has_constant_value(expr: &Expression, environment: &Constants) -> bool {
         Variable { name, .. } => variable(name, environment),
         ArrayInLine { .. } => array_inline(),
         UniformArray { .. } => uniform_array(),
-        _ => {unreachable!("Anonymous calls should not be reachable at this point."); }
+        _ => {
+            unreachable!("Anonymous calls should not be reachable at this point.");
+        }
     }
 }
 
@@ -363,10 +376,7 @@ fn expand_substitution(
     }
 }
 
-fn expand_underscore_substitution(
-    rhe: &mut Expression,
-    environment: &ExpressionHolder,
-) {
+fn expand_underscore_substitution(rhe: &mut Expression, environment: &ExpressionHolder) {
     *rhe = expand_expression(rhe.clone(), environment);
 }
 
@@ -404,7 +414,9 @@ fn expand_expression(expr: Expression, environment: &ExpressionHolder) -> Expres
     match expr {
         Number(meta, value) => expand_number(meta, value),
         ArrayInLine { meta, values } => expand_array(meta, values, environment),
-        UniformArray { meta, value, dimension} => expand_uniform_array(meta, *value, *dimension, environment),
+        UniformArray { meta, value, dimension } => {
+            expand_uniform_array(meta, *value, *dimension, environment)
+        }
         Call { id, meta, args } => expand_call(id, meta, args, environment),
         InfixOp { meta, lhe, rhe, infix_op } => {
             expand_infix(meta, *lhe, infix_op, *rhe, environment)
@@ -415,7 +427,9 @@ fn expand_expression(expr: Expression, environment: &ExpressionHolder) -> Expres
             expand_inline_switch_op(meta, *cond, *if_true, *if_false, environment)
         }
         Variable { meta, name, access } => expand_variable(meta, name, access, environment),
-        _ => {unreachable!("Anonymous calls should not be reachable at this point."); }
+        _ => {
+            unreachable!("Anonymous calls should not be reachable at this point.");
+        }
     }
 }
 
@@ -483,11 +497,7 @@ fn expand_prefix(
     build_prefix(meta, prefix_op, rhe)
 }
 
-fn expand_parallel(
-    meta: Meta,
-    old_rhe: Expression,
-    environment: &ExpressionHolder,
-) -> Expression {
+fn expand_parallel(meta: Meta, old_rhe: Expression, environment: &ExpressionHolder) -> Expression {
     let rhe = expand_expression(old_rhe, environment);
     build_parallel_op(meta, rhe)
 }

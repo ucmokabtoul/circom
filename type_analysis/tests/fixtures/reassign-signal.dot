@@ -1,0 +1,16 @@
+digraph {
+    0 [ label = "signal input in" ]
+    1 [ label = "signal output out" ]
+    2 [ label = "if(in == 5){\l    out <-- in*in + 1;\l  } else{\l    out <-- in*in + in;\l  }" ]
+    3 [ label = "out <-- in*in + 1" ]
+    4 [ label = "out <-- in*in + in" ]
+    5 [ label = "signal output out2 <== out*out + 1" ]
+    6 [ label = "signal output out2 <== out*out + 1" ]
+    0 -> 1 [ label = "0" ]
+    1 -> 2 [ label = "0" ]
+    2 -> 3 [ label = "0" ]
+    2 -> 4 [ label = "0" ]
+    4 -> 5 [ label = "0" ]
+    3 -> 5 [ label = "0" ]
+    5 -> 6 [ label = "0" ]
+}

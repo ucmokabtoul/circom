@@ -1,7 +1,7 @@
 use super::analyzers::*;
 use super::decorators::*;
-use program_structure::error_definition::ReportCollection;
 use program_structure::program_archive::ProgramArchive;
+use program_structure::error_definition::ReportCollection;
 
 pub fn check_types(
     program_archive: &mut ProgramArchive,
@@ -60,6 +60,9 @@ pub fn check_types(
     // Semantics analyses
     semantic_analyses(program_archive, &mut errors, &mut warnings);
 
+    if let Some(mut anon_component_reports) = report_lints(&program_archive) {
+        warnings.append(&mut anon_component_reports);
+    }
     if !errors.is_empty() {
         Result::Err(errors)
     } else {
@@ -129,14 +132,15 @@ fn semantic_analyses(
 ) {
     for template_name in program_archive.get_template_names().iter() {
         if let Result::Err(mut unknown_known_report) =
-            unknown_known_analysis(template_name, program_archive) {
-                errors.append(&mut unknown_known_report);
-            }
+            unknown_known_analysis(template_name, program_archive)
+        {
+            errors.append(&mut unknown_known_report);
+        }
         if program_archive.get_template_data(template_name).is_custom_gate() {
             let body = program_archive.get_template_data(template_name).get_body();
             match custom_gate_analysis(template_name, body) {
                 Result::Ok(mut custom_gate_report) => warnings.append(&mut custom_gate_report),
-                Result::Err(mut custom_gate_report) => errors.append(&mut custom_gate_report)
+                Result::Err(mut custom_gate_report) => errors.append(&mut custom_gate_report),
             }
         }
     }

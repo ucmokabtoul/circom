@@ -1,13 +1,13 @@
 use core::fmt;
 use std::fmt::Formatter;
 
-#[derive(Copy,Clone)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum ReportCode {
     //Parse Errors
     UnclosedComment,
     FileOs,
     NoMainFoundInProject,
-    MultipleMain, 
+    MultipleMain,
     MissingSemicolon,
     UnrecognizedInclude,
     UnrecognizedVersion,
@@ -16,7 +16,7 @@ pub enum ReportCode {
     IncludeNotFound,
     IllegalExpression,
     MultiplePragma,
-    NoCompilerVersionWarning, 
+    NoCompilerVersionWarning,
     CompilerVersionError,
     WrongTypesInAssignOperationOperatorSignal,
     WrongTypesInAssignOperationOperatorNoSignal,
@@ -73,6 +73,7 @@ pub enum ReportCode {
     BadArrayAccess,
     AssigningAComponentTwice,
     AssigningASignalTwice,
+    UnassignedSignalOnExecutionPath,
     NotAllowedOperation,
     ConstraintGeneratorInFunction,
     WrongSignalTags,
@@ -102,6 +103,10 @@ pub enum ReportCode {
     CustomGatesPragmaError,
     CustomGatesVersionError,
     AnonymousCompError,
+    AnonymousCompLint,
+    ConstantSignalLint,
+    LoopNoProgress,
+    LoopMayOverflow,
     UnderscoreWithNoSignalWarning,
     TupleError,
     InvalidSignalTagAccess,
@@ -123,7 +128,7 @@ impl fmt::Display for ReportCode {
             WrongTypesInAssignOperationExpression => "T2000",
             WrongTypesInAssignOperationDims(..) => "T2000",
             UnclosedComment => "P1005",
-            FileOs  => "P1006",
+            FileOs => "P1006",
             MissingSemicolon => "P1008",
             UnrecognizedInclude => "P1009",
             UnrecognizedVersion => "P1010",
@@ -199,6 +204,7 @@ impl fmt::Display for ReportCode {
             NonComputableExpression => "T20464",
             WrongNumberOfArguments(..) => "T20465",
             UninitializedComponent => "T20466",
+            UnassignedSignalOnExecutionPath => "T2037",
             // Constraint analysis codes
             UnconstrainedSignal => "CA01",
             UnconstrainedIOSignal => "CA02",
@@ -213,6 +219,10 @@ impl fmt::Display for ReportCode {
             AnonymousCompError => "TAC01",
             TupleError => "TAC02",
             UnderscoreWithNoSignalWarning => "TAC03",
+            AnonymousCompLint => "TAC04",
+            ConstantSignalLint => "CA05",
+            LoopNoProgress => "L3001",
+            LoopMayOverflow => "L3002",
         };
         f.write_str(string_format)
     }
